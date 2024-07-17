@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <title>Math Quiz Game</title>
+  </head>
+  <body>
+    <div class="card">
+      <div id="app">
+        <span class="timerContainer">Timer: <span class="timer"></span></span>
+        <div class="gameForm">
+          <div>
+            <span>Input Number Of Questions:</span>
+            <input type="number" id="numberOfQuestions" required />
+          </div>
+          <div>
+            <label for="timePerQuestion">Time Per Question:</label>
+            <select id="timePerQuestion">
+              <option value="3">3 seconds</option>
+              <option value="5">5 seconds</option>
+              <option value="7">7 seconds</option>
+              <option value="10">10 seconds</option>
+            </select>
+          </div>
+          <button id="submitBtn">Start Game</button>
+        </div>
+        <div class="gameContainer" style="display: none">
+          <div class="questionContainer"></div>
+          <div class="answerContainer"></div>
+        </div>
+        <div class="virtualKeypad" style="display: none">
+          <button class="keypadBtn">1</button>
+          <button class="keypadBtn">2</button>
+          <button class="keypadBtn">3</button>
+          <button class="keypadBtn">4</button>
+          <button class="keypadBtn">5</button>
+          <button class="keypadBtn">6</button>
+          <button class="keypadBtn">7</button>
+          <button class="keypadBtn">8</button>
+          <button class="keypadBtn">9</button>
+          <button class="keypadBtn">0</button>
+          <button class="keypadBtn submit">Submit</button>
+          <button class="keypadBtn delete">Delete</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log("JavaScript loaded successfully");
+
+        const questionContainer = document.querySelector(".questionContainer");
+        const timer = document.querySelector(".timer");
+        const timerContainer = document.querySelector(".timerContainer");
+        const answerContainer = document.querySelector(".answerContainer");
+        const submitBtn = document.getElementById("submitBtn");
+        const gameForm = document.querySelector(".gameForm");
+        const gameContainer = document.querySelector(".gameContainer");
+        const virtualKeypad = document.querySelector(".virtualKeypad");
+        const submit = document.querySelector(".submit");
+
+        if (
+          !questionContainer ||
+          !timer ||
+          !timerContainer ||
+          !answerContainer ||
+          !submitBtn ||
+          !gameForm ||
+          !gameContainer ||
+          !virtualKeypad
+        ) {
+          console.error(
+            "One or more required elements are missing from the DOM."
+          );
+          return;
+        }
+
+        // CHANGED: Move answer input creation here
+        answerContainer.innerHTML = `
+          <div>
+            <span>Your Answer:</span>
+            <input type="number" name="answerInput" class="answerInput" readonly required />
+          </div>
+        `;
+        const answerInput = document.querySelector(".answerInput");
+
+        // CHANGED: Add event listener for input here
+        answerInput.addEventListener("input", () => {
+          submit.disabled = answerInput.value.trim() === "";
+        });
+
+        const questions = [];
+        const userAnswers = [];
+        const correctAnswers = [];
+        let numOfQuestion = 0;
+        let questionTime = 5;
+        let time = questionTime;
+        let questionIndex = 0;
+        let timerInterval;
+
+        const validateForm = () => {
+          submit.disabled = true; // CHANGED: Initially disable submit button
+
+          const numberOfQuestionsInput =
+            document.getElementById("numberOfQuestions");
+          const timePerQuestionSelect =
+            document.getElementById("timePerQuestion");
+
+          if (!numberOfQuestionsInput.value || !timePerQuestionSelect.value) {
+            alert("Please fill out all fields.");
+            return;
+          }
+
+          gameForm.style.display = "none";
+          gameContainer.style.display = "block";
+          virtualKeypad.style.display = "grid";
+
+          questionTime = parseInt(timePerQuestionSelect.value, 10);
+          numOfQuestion = parseInt(numberOfQuestionsInput.value, 10);
+
+          console.log("Number Of Questions:", numOfQuestion);
+          console.log("Time Per Question:", questionTime);
+
+          startQuiz();
+        };
+
+        const generateRandomNumber = () => Math.floor(Math.random() * 10) + 1;
+
+        const generateRandomQuestions = () => {
+          const num1 = generateRandomNumber();
+          const num2 = generateRandomNumber();
+          correctAnswers.push(num1 + num2);
+          return `${num1} + ${num2} = `;
+        };
+
+        const createQuestions = (numOfQuestion) => {
+          for (let i = 0; i < numOfQuestion; i++) {
+            questions.push(generateRandomQuestions());
+          }
+        };
+
+        const showCurrentQuestion = () => {
+          submit.disabled = true; // CHANGED: Disable submit button for new question
+          submit.classList.add("disabled"); // CHANGED: Add disabled class for styling
+
+          questionContainer.textContent = questions[questionIndex];
+          answerInput.value = ""; // CHANGED: Clear previous answer
+
+          // Reset timer for each question
+          time = questionTime;
+          updateTimer();
+        };
+
+        const submitAnswer = () => {
+          const answer = answerInput.value.trim();
+          if (answer !== "") {
+            userAnswers.push(parseInt(answer, 10));
+            nextQuestion();
+          }
+        };
+
+        const updateTimer = () => {
+          timer.textContent = time;
+        };
+
+        const nextQuestion = () => {
+          questionIndex++;
+          if (questionIndex < questions.length) {
+            showCurrentQuestion();
+          } else {
+            endQuiz();
+          }
+        };
+
+        const endQuiz = () => {
+          clearInterval(timerInterval);
+          timerContainer.style.display = "none";
+          answerContainer.style.display = "none";
+          virtualKeypad.style.display = "none";
+
+          const correctCount = userAnswers.reduce((count, answer, index) => {
+            return count + (answer === correctAnswers[index] ? 1 : 0);
+          }, 0);
+
+          questionContainer.innerHTML = `
+          <h2>Quiz completed!</h2>
+          <p>You answered ${correctCount} out of ${questions.length} questions correctly.</p>
+          <button id="playAgainBtn">Play Again</button>
+        `;
+
+          const playAgainBtn = document.getElementById("playAgainBtn");
+          playAgainBtn.addEventListener("click", resetQuiz);
+
+          console.log("User Answers:", userAnswers);
+          console.log("Correct Answers:", correctAnswers);
+        };
+
+        const resetQuiz = () => {
+          questions.length = 0;
+          userAnswers.length = 0;
+          correctAnswers.length = 0;
+          questionIndex = 0;
+          time = questionTime;
+
+          gameForm.style.display = "flex";
+          gameContainer.style.display = "none";
+          timerContainer.style.display = "inline";
+          questionContainer.innerHTML = "";
+          answerContainer.style.display = "flex";
+        };
+
+        const startQuiz = () => {
+          createQuestions(numOfQuestion);
+          showCurrentQuestion();
+
+          timerInterval = setInterval(() => {
+            if (time > 0) {
+              time--;
+              updateTimer();
+            } else {
+              userAnswers.push(-1); // Push -1 for unanswered question
+              nextQuestion();
+            }
+          }, 1000);
+        };
+
+        submitBtn.addEventListener("click", validateForm);
+
+        // Virtual Keypad functionality
+        const keypadBtns = document.querySelectorAll(".keypadBtn");
+        keypadBtns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            if (btn.textContent === "Delete") {
+              answerInput.value = answerInput.value.slice(0, -1);
+            } else if (btn.textContent === "Submit") {
+              submitAnswer();
+            } else {
+              answerInput.value += btn.textContent;
+            }
+            // CHANGED: Trigger input event to update submit button state
+            answerInput.dispatchEvent(new Event("input"));
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
